@@ -42,6 +42,7 @@ struct drm_display_mode;
 struct drm_mode_create_dumb;
 struct drm_printer;
 struct sg_table;
+struct vfsmount;
 
 /**
  * enum drm_driver_feature - feature flags
@@ -339,7 +340,8 @@ struct drm_driver {
 	struct drm_gem_object *(*gem_prime_import_sg_table)(
 				struct drm_device *dev,
 				struct dma_buf_attachment *attach,
-				struct sg_table *sgt);
+				struct sg_table *sgt,
+				struct vfsmount *mnt);
 	/**
 	 * @gem_prime_mmap:
 	 *

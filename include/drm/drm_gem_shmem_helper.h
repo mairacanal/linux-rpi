@@ -101,12 +101,18 @@ struct drm_gem_shmem_object {
 	 * @map_wc: map object write-combined (instead of using shmem defaults).
 	 */
 	bool map_wc;
+
+	/**
+	 * @gemfs:
+	 */
+	struct vfsmount *gemfs;
 };
 
 #define to_drm_gem_shmem_obj(obj) \
 	container_of(obj, struct drm_gem_shmem_object, base)
 
 struct drm_gem_shmem_object *drm_gem_shmem_create(struct drm_device *dev, size_t size);
+struct drm_gem_shmem_object *drm_gem_shmem_create_with_mnt(struct drm_device *dev, size_t size, struct vfsmount *mnt);
 void drm_gem_shmem_free(struct drm_gem_shmem_object *shmem);
 
 int drm_gem_shmem_get_pages(struct drm_gem_shmem_object *shmem);
@@ -279,7 +285,8 @@ static inline int drm_gem_shmem_object_mmap(struct drm_gem_object *obj, struct v
 struct drm_gem_object *
 drm_gem_shmem_prime_import_sg_table(struct drm_device *dev,
 				    struct dma_buf_attachment *attach,
-				    struct sg_table *sgt);
+				    struct sg_table *sgt,
+				    struct vfsmount *mnt);
 int drm_gem_shmem_dumb_create(struct drm_file *file, struct drm_device *dev,
 			      struct drm_mode_create_dumb *args);
 

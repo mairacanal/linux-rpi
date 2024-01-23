@@ -1153,6 +1153,8 @@ v3d_gem_init(struct drm_device *dev)
 		return -ENOMEM;
 	}
 
+	v3d_gemfs_init(v3d);
+
 	v3d_init_hw_state(v3d);
 	v3d_mmu_set_page_table(v3d);
 
@@ -1180,6 +1182,8 @@ v3d_gem_destroy(struct drm_device *dev)
 	WARN_ON(v3d->render_job);
 
 	drm_mm_takedown(&v3d->mm);
+
+	v3d_gemfs_fini(v3d);
 
 	dma_free_coherent(v3d->drm.dev, 4096 * 1024, (void *)v3d->pt,
 			  v3d->pt_paddr);

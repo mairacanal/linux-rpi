@@ -179,14 +179,15 @@ static void vc4_close(struct drm_device *dev, struct drm_file *file)
 struct drm_gem_object *
 vc4_prime_import_sg_table(struct drm_device *dev,
 			  struct dma_buf_attachment *attach,
-			  struct sg_table *sgt)
+			  struct sg_table *sgt,
+			  struct vfsmount *mnt)
 {
 	phys_addr_t phys = dma_to_phys(dev->dev, sg_dma_address(sgt->sgl));
 
 	if (is_swiotlb_buffer(dev->dev, phys))
 		return ERR_PTR(-EINVAL);
 
-	return drm_gem_dma_prime_import_sg_table(dev, attach, sgt);
+	return drm_gem_dma_prime_import_sg_table(dev, attach, sgt, mnt);
 }
 
 DEFINE_DRM_GEM_FOPS(vc4_drm_fops);

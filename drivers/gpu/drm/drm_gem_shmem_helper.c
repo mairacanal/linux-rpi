@@ -50,7 +50,7 @@ static const struct drm_gem_object_funcs drm_gem_shmem_funcs = {
 };
 
 static struct drm_gem_shmem_object *
-__drm_gem_shmem_create(struct drm_device *dev, size_t size, bool private)
+__drm_gem_shmem_create(struct drm_device *dev, size_t size, bool private, struct vfsmount *mnt)
 {
 	struct drm_gem_shmem_object *shmem;
 	struct drm_gem_object *obj;
@@ -77,7 +77,7 @@ __drm_gem_shmem_create(struct drm_device *dev, size_t size, bool private)
 		drm_gem_private_object_init(dev, obj, size);
 		shmem->map_wc = false; /* dma-buf mappings use always writecombine */
 	} else {
-		ret = drm_gem_object_init(dev, obj, size);
+		ret = drm_gem_object_init(dev, obj, size, mnt);
 	}
 	if (ret)
 		goto err_free;
@@ -124,9 +124,15 @@ err_free:
  */
 struct drm_gem_shmem_object *drm_gem_shmem_create(struct drm_device *dev, size_t size)
 {
-	return __drm_gem_shmem_create(dev, size, false);
+	return __drm_gem_shmem_create(dev, size, false, NULL);
 }
 EXPORT_SYMBOL_GPL(drm_gem_shmem_create);
+
+struct drm_gem_shmem_object *drm_gem_shmem_create_with_mnt(struct drm_device *dev, size_t size, struct vfsmount *mnt)
+{
+	return __drm_gem_shmem_create(dev, size, false, mnt);
+}
+EXPORT_SYMBOL_GPL(drm_gem_shmem_create_with_mnt);
 
 /**
  * drm_gem_shmem_free - Free resources associated with a shmem GEM object
@@ -776,12 +782,13 @@ EXPORT_SYMBOL_GPL(drm_gem_shmem_get_pages_sgt);
 struct drm_gem_object *
 drm_gem_shmem_prime_import_sg_table(struct drm_device *dev,
 				    struct dma_buf_attachment *attach,
-				    struct sg_table *sgt)
+				    struct sg_table *sgt,
+				    struct vfsmount *mnt)
 {
 	size_t size = PAGE_ALIGN(attach->dmabuf->size);
 	struct drm_gem_shmem_object *shmem;
 
-	shmem = __drm_gem_shmem_create(dev, size, true);
+	shmem = __drm_gem_shmem_create(dev, size, true, mnt);
 	if (IS_ERR(shmem))
 		return ERR_CAST(shmem);
 
