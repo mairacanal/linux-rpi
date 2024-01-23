@@ -95,7 +95,7 @@ __drm_gem_dma_create(struct drm_device *drm, size_t size, bool private)
 		/* Always use writecombine for dma-buf mappings */
 		dma_obj->map_noncoherent = false;
 	} else {
-		ret = drm_gem_object_init(drm, gem_obj, size);
+		ret = drm_gem_object_init(drm, gem_obj, size, NULL);
 	}
 	if (ret)
 		goto error;
@@ -461,7 +461,8 @@ EXPORT_SYMBOL_GPL(drm_gem_dma_get_sg_table);
 struct drm_gem_object *
 drm_gem_dma_prime_import_sg_table(struct drm_device *dev,
 				  struct dma_buf_attachment *attach,
-				  struct sg_table *sgt)
+				  struct sg_table *sgt,
+				  struct vfsmount *mnt)
 {
 	struct drm_gem_dma_object *dma_obj;
 
@@ -574,7 +575,8 @@ EXPORT_SYMBOL_GPL(drm_gem_dma_mmap);
 struct drm_gem_object *
 drm_gem_dma_prime_import_sg_table_vmap(struct drm_device *dev,
 				       struct dma_buf_attachment *attach,
-				       struct sg_table *sgt)
+				       struct sg_table *sgt,
+				       struct vfsmount *mnt)
 {
 	struct drm_gem_dma_object *dma_obj;
 	struct drm_gem_object *obj;
@@ -587,7 +589,7 @@ drm_gem_dma_prime_import_sg_table_vmap(struct drm_device *dev,
 		return ERR_PTR(ret);
 	}
 
-	obj = drm_gem_dma_prime_import_sg_table(dev, attach, sgt);
+	obj = drm_gem_dma_prime_import_sg_table(dev, attach, sgt, mnt);
 	if (IS_ERR(obj)) {
 		dma_buf_vunmap(attach->dmabuf, &map);
 		return obj;

@@ -150,7 +150,8 @@ int drm_gem_dma_dumb_create(struct drm_file *file_priv,
 struct drm_gem_object *
 drm_gem_dma_prime_import_sg_table(struct drm_device *dev,
 				  struct dma_buf_attachment *attach,
-				  struct sg_table *sgt);
+				  struct sg_table *sgt,
+				  struct vfsmount *mnt);
 
 /**
  * DRM_GEM_DMA_DRIVER_OPS_WITH_DUMB_CREATE - DMA GEM driver operations
@@ -231,7 +232,8 @@ drm_gem_dma_prime_import_sg_table(struct drm_device *dev,
 struct drm_gem_object *
 drm_gem_dma_prime_import_sg_table_vmap(struct drm_device *drm,
 				       struct dma_buf_attachment *attach,
-				       struct sg_table *sgt);
+				       struct sg_table *sgt,
+				       struct vfsmount *mnt);
 
 /*
  * File ops

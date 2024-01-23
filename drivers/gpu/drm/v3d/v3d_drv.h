@@ -17,7 +17,7 @@ struct clk;
 struct platform_device;
 struct reset_control;
 
-#define GMP_GRANULARITY (128 * 1024)
+#define GMP_GRANULARITY (1024 * 1024)
 
 #define V3D_MAX_QUEUES (V3D_CACHE_CLEAN + 1)
 
@@ -156,6 +156,11 @@ struct v3d_dev {
 	 */
 	struct drm_mm mm;
 	spinlock_t mm_lock;
+
+	/*
+	 *
+	 */
+	struct vfsmount *gemfs;
 
 	struct work_struct overflow_mem_work;
 
@@ -424,7 +429,8 @@ int v3d_get_bo_offset_ioctl(struct drm_device *dev, void *data,
 			    struct drm_file *file_priv);
 struct drm_gem_object *v3d_prime_import_sg_table(struct drm_device *dev,
 						 struct dma_buf_attachment *attach,
-						 struct sg_table *sgt);
+						 struct sg_table *sgt,
+						 struct vfsmount *mnt);
 
 /* v3d_debugfs.c */
 void v3d_debugfs_init(struct drm_minor *minor);
@@ -467,6 +473,10 @@ void v3d_mmu_remove_ptes(struct v3d_bo *bo);
 int v3d_sched_init(struct v3d_dev *v3d);
 void v3d_sched_fini(struct v3d_dev *v3d);
 void v3d_sched_stats_update(struct v3d_queue_stats *queue_stats);
+
+/* v3d_gemfs.c */
+void v3d_gemfs_init(struct v3d_dev *v3d);
+void v3d_gemfs_fini(struct v3d_dev *v3d);
 
 /* v3d_perfmon.c */
 void v3d_perfmon_get(struct v3d_perfmon *perfmon);
