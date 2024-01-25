@@ -98,9 +98,6 @@ void v3d_mmu_insert_ptes(struct v3d_bo *bo)
         u32 page_size = 0;
         u32 j = 0;
 
-        pr_info("contiguous size = %lu", drm_prime_get_contiguous_size(shmem_obj->sgt));
-        pr_info("size = %lu", shmem_obj->base.size);
-
 	if (ctg_size >= SZ_1M)
 		page_size = SZ_1M;
 	else if (ctg_size >= SZ_64K)
@@ -118,14 +115,11 @@ void v3d_mmu_insert_ptes(struct v3d_bo *bo)
 		if (j == 0) {
 			if (page_size == SZ_1M && size >= SZ_1M) {
 				j = 256;
-				pr_info("PAGE 1M");
 			} else if (page_size == SZ_64K && size >= SZ_64K) {
 				j = 16;
-				pr_info("PAGE 64K");
 			} else if (size >= SZ_4K) {
 				page_size = SZ_4K;
 				j = 1;
-				pr_info("PAGE 4K");
 			}
 
 			size -= page_size;
@@ -139,7 +133,6 @@ void v3d_mmu_insert_ptes(struct v3d_bo *bo)
 		BUG_ON(page_address + V3D_PAGE_FACTOR >=
 		       BIT(24));
 
-		// pr_info("v3d->pt[0x%08x] = 0x%08x (dma_address = 0x%08llx i = %d)", page, pte + i, dma_addr, i);
 		for (i = 0; i < V3D_PAGE_FACTOR; i++)
 			v3d->pt[page++] = pte + i;
 
