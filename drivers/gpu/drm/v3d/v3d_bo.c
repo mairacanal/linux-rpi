@@ -103,8 +103,6 @@ v3d_bo_create_finish(struct drm_gem_object *obj)
 
 	if (obj->size >= SZ_1M)
 		align = SZ_1M;
-	else if (obj->size >= SZ_64K)
-		align = SZ_64K;
 	else
 		align = PAGE_SIZE;
 
