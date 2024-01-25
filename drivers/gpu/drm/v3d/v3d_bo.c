@@ -103,8 +103,6 @@ v3d_bo_create_finish(struct drm_gem_object *obj)
 
 	if (obj->size >= SZ_1M)
 		align = SZ_1M;
-	else if (obj->size >= SZ_64K)
-		align = SZ_64K;
 	else
 		align = PAGE_SIZE;
 
@@ -142,7 +140,7 @@ struct v3d_bo *v3d_bo_create(struct drm_device *dev, struct drm_file *file_priv,
 
 	size = PAGE_ALIGN(unaligned_size);
 
-	if (size >= SZ_64K) {
+	if (size >= SZ_1M) {
 		shmem_obj = drm_gem_shmem_create_with_mnt(dev, size, v3d->gemfs);
 		if (IS_ERR(shmem_obj))
 			return ERR_CAST(shmem_obj);

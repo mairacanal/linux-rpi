@@ -28,7 +28,6 @@
  * superpage bit set.
  */
 #define V3D_PTE_SUPERPAGE BIT(31)
-#define V3D_PTE_BIGPAGE BIT(30)
 #define V3D_PTE_WRITEABLE BIT(29)
 #define V3D_PTE_VALID BIT(28)
 
@@ -98,14 +97,6 @@ void v3d_mmu_insert_ptes(struct v3d_bo *bo)
         u32 page_size = 0;
         u32 j = 0;
 
-	if (ctg_size >= SZ_1M)
-		page_size = SZ_1M;
-	else if (ctg_size >= SZ_64K)
-		page_size = SZ_64K;
-	else
-		page_size = SZ_4K;
-
-
 	for_each_sgtable_dma_page(shmem_obj->sgt, &dma_iter, 0) {
 		dma_addr_t dma_addr = sg_page_iter_dma_address(&dma_iter);
 		u32 page_address = dma_addr >> V3D_MMU_PAGE_SHIFT;
@@ -113,10 +104,9 @@ void v3d_mmu_insert_ptes(struct v3d_bo *bo)
 		u32 i;
 
 		if (j == 0) {
-			if (page_size == SZ_1M && size >= SZ_1M) {
+			if (ctg_size >= SZ_1M && size >= SZ_1M) {
+				page_size = SZ_1M;
 				j = 256;
-			} else if (page_size == SZ_64K && size >= SZ_64K) {
-				j = 16;
 			} else if (size >= SZ_4K) {
 				page_size = SZ_4K;
 				j = 1;
@@ -127,8 +117,6 @@ void v3d_mmu_insert_ptes(struct v3d_bo *bo)
 
                 if (page_size == SZ_1M)
                         pte |= V3D_PTE_SUPERPAGE;
-                else if (page_size == SZ_64K)
-                        pte |= V3D_PTE_BIGPAGE;
 
 		BUG_ON(page_address + V3D_PAGE_FACTOR >=
 		       BIT(24));
