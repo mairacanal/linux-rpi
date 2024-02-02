@@ -17,8 +17,6 @@ struct clk;
 struct platform_device;
 struct reset_control;
 
-#define GMP_GRANULARITY (128 * 1024)
-
 #define V3D_MAX_QUEUES (V3D_CACHE_CLEAN + 1)
 
 static inline char *

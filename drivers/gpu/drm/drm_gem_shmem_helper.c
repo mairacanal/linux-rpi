@@ -51,7 +51,7 @@ static const struct drm_gem_object_funcs drm_gem_shmem_funcs = {
 
 static struct drm_gem_shmem_object *
 __drm_gem_shmem_create(struct drm_device *dev, size_t size, bool private,
-		       struct vfsmount *gemfs)
+		      struct vfsmount *gemfs)
 {
 	struct drm_gem_shmem_object *shmem;
 	struct drm_gem_object *obj;
@@ -143,10 +143,10 @@ EXPORT_SYMBOL_GPL(drm_gem_shmem_create);
  * error code on failure.
  */
 struct drm_gem_shmem_object *drm_gem_shmem_create_with_mnt(struct drm_device *dev,
-                                                          size_t size,
-                                                          struct vfsmount *gemfs)
+							  size_t size,
+							  struct vfsmount *gemfs)
 {
-       return __drm_gem_shmem_create(dev, size, false, gemfs);
+	return __drm_gem_shmem_create(dev, size, false, gemfs);
 }
 EXPORT_SYMBOL_GPL(drm_gem_shmem_create_with_mnt);
 
