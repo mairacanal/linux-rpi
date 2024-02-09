@@ -17,8 +17,6 @@ struct clk;
 struct platform_device;
 struct reset_control;
 
-#define GMP_GRANULARITY (128 * 1024)
-
 #define V3D_MAX_QUEUES (V3D_CACHE_CLEAN + 1)
 
 static inline char *
@@ -415,7 +413,7 @@ static inline unsigned long nsecs_to_jiffies_timeout(const u64 n)
 struct drm_gem_object *v3d_create_object(struct drm_device *dev, size_t size);
 void v3d_free_object(struct drm_gem_object *gem_obj);
 struct v3d_bo *v3d_bo_create(struct drm_device *dev, struct drm_file *file_priv,
-			     size_t size);
+			     size_t size, u64 align);
 int v3d_create_bo_ioctl(struct drm_device *dev, void *data,
 			struct drm_file *file_priv);
 int v3d_mmap_bo_ioctl(struct drm_device *dev, void *data,

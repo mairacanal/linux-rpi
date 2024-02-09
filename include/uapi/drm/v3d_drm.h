@@ -242,6 +242,8 @@ struct drm_v3d_create_bo {
 	 * units treat 0 specially.
 	 */
 	__u32 offset;
+
+	__u64 align;
 };
 
 /**

@@ -86,7 +86,7 @@ struct drm_gem_object *v3d_create_object(struct drm_device *dev, size_t size)
 }
 
 static int
-v3d_bo_create_finish(struct drm_gem_object *obj)
+v3d_bo_create_finish(struct drm_gem_object *obj, u64 align)
 {
 	struct v3d_dev *v3d = to_v3d_dev(obj->dev);
 	struct v3d_bo *bo = to_v3d_bo(obj);
@@ -107,7 +107,7 @@ v3d_bo_create_finish(struct drm_gem_object *obj)
 	 */
 	ret = drm_mm_insert_node_generic(&v3d->mm, &bo->node,
 					 obj->size >> PAGE_SHIFT,
-					 GMP_GRANULARITY >> PAGE_SHIFT, 0, 0);
+					 align >> PAGE_SHIFT, 0, 0);
 	spin_unlock(&v3d->mm_lock);
 	if (ret)
 		return ret;
@@ -124,7 +124,7 @@ v3d_bo_create_finish(struct drm_gem_object *obj)
 }
 
 struct v3d_bo *v3d_bo_create(struct drm_device *dev, struct drm_file *file_priv,
-			     size_t unaligned_size)
+			     size_t unaligned_size, u64 align)
 {
 	struct drm_gem_shmem_object *shmem_obj;
 	struct v3d_bo *bo;
@@ -135,7 +135,7 @@ struct v3d_bo *v3d_bo_create(struct drm_device *dev, struct drm_file *file_priv,
 		return ERR_CAST(shmem_obj);
 	bo = to_v3d_bo(&shmem_obj->base);
 
-	ret = v3d_bo_create_finish(&shmem_obj->base);
+	ret = v3d_bo_create_finish(&shmem_obj->base, align);
 	if (ret)
 		goto free_obj;
 
@@ -158,7 +158,7 @@ v3d_prime_import_sg_table(struct drm_device *dev,
 	if (IS_ERR(obj))
 		return obj;
 
-	ret = v3d_bo_create_finish(obj);
+	ret = v3d_bo_create_finish(obj, 128 * 1024);
 	if (ret) {
 		drm_gem_shmem_free(&to_v3d_bo(obj)->base);
 		return ERR_PTR(ret);
@@ -179,7 +179,7 @@ int v3d_create_bo_ioctl(struct drm_device *dev, void *data,
 		return -EINVAL;
 	}
 
-	bo = v3d_bo_create(dev, file_priv, PAGE_ALIGN(args->size));
+	bo = v3d_bo_create(dev, file_priv, PAGE_ALIGN(args->size), args->align);
 	if (IS_ERR(bo))
 		return PTR_ERR(bo);
 
