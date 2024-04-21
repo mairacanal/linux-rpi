@@ -11,6 +11,7 @@ void v3d_gemfs_init(struct v3d_dev *v3d)
 	char huge_opt[] = "huge=within_size";
 	struct file_system_type *type;
 	struct vfsmount *gemfs;
+	extern bool super_pages;
 
 	/*
 	 * By creating our own shmemfs mountpoint, we can pass in
@@ -18,6 +19,10 @@ void v3d_gemfs_init(struct v3d_dev *v3d)
 	 * only do so on platforms which benefit from it.
 	 */
 	if (!IS_ENABLED(CONFIG_TRANSPARENT_HUGEPAGE))
+		goto err;
+
+	/* The user doesn't want to enable Super Pages */
+	if (!super_pages)
 		goto err;
 
 	type = get_fs_type("tmpfs");
