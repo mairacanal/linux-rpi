@@ -50,6 +50,7 @@ MODULE_PARM_DESC(super_pages, "Enable/Disable Super Pages support.");
 static int v3d_get_param_ioctl(struct drm_device *dev, void *data,
 			       struct drm_file *file_priv)
 {
+	struct v3d_file_priv *v3d_priv = file_priv->driver_priv;
 	struct v3d_dev *v3d = to_v3d_dev(dev);
 	struct drm_v3d_get_param *args = data;
 	static const u32 reg_map[] = {
@@ -114,6 +115,9 @@ static int v3d_get_param_ioctl(struct drm_device *dev, void *data,
 	case DRM_V3D_PARAM_GLOBAL_RESET_COUNTER:
 		args->value = atomic_read(&v3d->reset_counter);
 		return 0;
+	case DRM_V3D_PARAM_CONTEXT_RESET_COUNTER:
+		args->value = atomic_read(&v3d_priv->reset_counter);
+		return 0;
 	default:
 		DRM_DEBUG("Unknown parameter %d\n", args->param);
 		return -EINVAL;
@@ -144,7 +148,10 @@ v3d_open(struct drm_device *dev, struct drm_file *file)
 		seqcount_init(&v3d_priv->stats[i].lock);
 	}
 
+	// TODO: i don't think it's needed, as kzalloc will 0 the struct
+	atomic_set(&v3d_priv->reset_counter, 0);
 	v3d_perfmon_open_file(v3d_priv);
+
 	file->driver_priv = v3d_priv;
 
 	return 0;

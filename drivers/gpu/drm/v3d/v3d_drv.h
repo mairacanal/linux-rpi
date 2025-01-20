@@ -240,6 +240,11 @@ struct v3d_file_priv {
 
 	/* Stores the GPU stats for a specific queue for this fd. */
 	struct v3d_stats stats[V3D_MAX_QUEUES];
+
+	/* Per-fd reset counter, must be incremented when a job related to
+	 * this fd causes a GPU reset.
+	 */
+	atomic_t reset_counter;
 };
 
 struct v3d_bo {
