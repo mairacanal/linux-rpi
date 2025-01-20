@@ -310,6 +310,8 @@ v3d_gem_init(struct drm_device *dev)
 
 	v3d_gemfs_init(v3d);
 
+	atomic_set(&v3d->reset_counter, 0);
+
 	ret = v3d_sched_init(v3d);
 	if (ret) {
 		drm_mm_takedown(&v3d->mm);

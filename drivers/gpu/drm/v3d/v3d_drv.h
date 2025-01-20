@@ -202,6 +202,15 @@ struct v3d_dev {
 	 * all jobs.
 	 */
 	struct v3d_perfmon *global_perfmon;
+
+	// TODO: maybe I don't need to use a atomic type, as we have reset_lock
+	// but I need to take a deeper look. For writing, I can assure that we
+	// are safe, but for readingalso?
+
+	/* Global reset counter. The counter must be incremented when
+	 * a GPU reset happens.
+	 */
+	atomic_t reset_counter;
 };
 
 static inline struct v3d_dev *
