@@ -224,27 +224,28 @@ static struct dma_fence *v3d_bin_job_run(struct drm_sched_job *sched_job)
 {
 	struct v3d_bin_job *job = to_bin_job(sched_job);
 	struct v3d_dev *v3d = job->base.v3d;
+	struct v3d_queue_state *queue = &v3d->queue[V3D_BIN];
 	struct drm_device *dev = &v3d->drm;
 	struct dma_fence *fence;
 	unsigned long irqflags;
 
 	if (unlikely(job->base.base.s_fence->finished.error)) {
-		spin_lock_irqsave(&v3d->job_lock, irqflags);
-		v3d->bin_job = NULL;
-		spin_unlock_irqrestore(&v3d->job_lock, irqflags);
+		spin_lock_irqsave(&queue->queue_lock, irqflags);
+		queue->active_job = NULL;
+		spin_unlock_irqrestore(&queue->queue_lock, irqflags);
 		return NULL;
 	}
 
 	/* Lock required around bin_job update vs
 	 * v3d_overflow_mem_work().
 	 */
-	spin_lock_irqsave(&v3d->job_lock, irqflags);
-	v3d->bin_job = job;
+	spin_lock_irqsave(&queue->queue_lock, irqflags);
+	queue->active_job = to_v3d_job(sched_job);
 	/* Clear out the overflow allocation, so we don't
 	 * reuse the overflow attached to a previous job.
 	 */
 	V3D_CORE_WRITE(0, V3D_PTB_BPOS, 0);
-	spin_unlock_irqrestore(&v3d->job_lock, irqflags);
+	spin_unlock_irqrestore(&queue->queue_lock, irqflags);
 
 	v3d_invalidate_caches(v3d);
 
@@ -288,11 +289,11 @@ static struct dma_fence *v3d_render_job_run(struct drm_sched_job *sched_job)
 	struct dma_fence *fence;
 
 	if (unlikely(job->base.base.s_fence->finished.error)) {
-		v3d->render_job = NULL;
+		v3d->queue[V3D_RENDER].active_job = NULL;
 		return NULL;
 	}
 
-	v3d->render_job = job;
+	v3d->queue[V3D_RENDER].active_job = to_v3d_job(sched_job);
 
 	/* Can we avoid this flush?  We need to be careful of
 	 * scheduling, though -- imagine job0 rendering to texture and
@@ -336,11 +337,11 @@ v3d_tfu_job_run(struct drm_sched_job *sched_job)
 	struct dma_fence *fence;
 
 	if (unlikely(job->base.base.s_fence->finished.error)) {
-		v3d->tfu_job = NULL;
+		v3d->queue[V3D_TFU].active_job = NULL;
 		return NULL;
 	}
 
-	v3d->tfu_job = job;
+	v3d->queue[V3D_TFU].active_job = to_v3d_job(sched_job);
 
 	fence = v3d_fence_create(v3d, V3D_TFU);
 	if (IS_ERR(fence))
@@ -384,11 +385,11 @@ v3d_csd_job_run(struct drm_sched_job *sched_job)
 	int i, csd_cfg0_reg;
 
 	if (unlikely(job->base.base.s_fence->finished.error)) {
-		v3d->csd_job = NULL;
+		v3d->queue[V3D_CSD].active_job = NULL;
 		return NULL;
 	}
 
-	v3d->csd_job = job;
+	v3d->queue[V3D_CSD].active_job = to_v3d_job(sched_job);
 
 	v3d_invalidate_caches(v3d);
 
