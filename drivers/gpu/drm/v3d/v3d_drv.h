@@ -135,6 +135,8 @@ struct v3d_dev {
 	void __iomem *gca_regs;
 	void __iomem *sms_regs;
 	struct clk *clk;
+	unsigned long clk_min_rate;
+	unsigned long clk_max_rate;
 
 	struct reset_control *reset;
 

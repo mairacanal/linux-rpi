@@ -47,6 +47,9 @@ int v3d_power_suspend(struct device *dev)
 	if (v3d->reset)
 		reset_control_assert(v3d->reset);
 
+	if (v3d->clk)
+		clk_set_rate(v3d->clk, 0);
+
 	clk_disable_unprepare(v3d->clk);
 
 	return 0;
@@ -60,6 +63,9 @@ int v3d_power_resume(struct device *dev)
 	ret = clk_prepare_enable(v3d->clk);
 	if (ret)
 		return ret;
+
+	if (v3d->clk)
+		clk_set_rate(v3d->clk, v3d->clk_max_rate);
 
 	if (v3d->reset) {
 		ret = reset_control_deassert(v3d->reset);

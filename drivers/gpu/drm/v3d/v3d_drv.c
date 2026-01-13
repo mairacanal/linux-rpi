@@ -352,6 +352,11 @@ static int v3d_platform_drm_probe(struct platform_device *pdev)
 	if (IS_ERR(v3d->clk))
 		return dev_err_probe(dev, PTR_ERR(v3d->clk), "Failed to get V3D clock\n");
 
+	if (v3d->clk) {
+		v3d->clk_min_rate = clk_round_rate(v3d->clk, 0);
+		v3d->clk_max_rate = clk_round_rate(v3d->clk, ULONG_MAX);
+	}
+
 	ret = v3d_irq_init(v3d);
 	if (ret)
 		return ret;
