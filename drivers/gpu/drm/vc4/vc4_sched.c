@@ -172,15 +172,12 @@ vc4_reset(struct drm_device *dev)
 
 	drm_err(dev, "Resetting GPU.\n");
 
-	mutex_lock(&vc4->power_lock);
-	if (vc4->power_refcount) {
-		/* Power the device off and back on the by dropping the
-		 * reference on runtime PM.
-		 */
-		pm_runtime_put_sync_suspend(&vc4->v3d->pdev->dev);
-		pm_runtime_get_sync(&vc4->v3d->pdev->dev);
-	}
-	mutex_unlock(&vc4->power_lock);
+	/*
+	 * Power the device off and back on by dropping the reference
+	 * on runtime PM.
+	 */
+	pm_runtime_put_sync_suspend(&vc4->v3d->pdev->dev);
+	pm_runtime_get_sync(&vc4->v3d->pdev->dev);
 
 	vc4_irq_reset(dev);
 }

@@ -287,10 +287,6 @@ int vc4_gem_init(struct drm_device *dev)
 	if (ret)
 		return ret;
 
-	ret = drmm_mutex_init(dev, &vc4->power_lock);
-	if (ret)
-		return ret;
-
 	INIT_LIST_HEAD(&vc4->purgeable.list);
 
 	ret = drmm_mutex_init(dev, &vc4->purgeable.lock);

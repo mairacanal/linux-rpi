@@ -120,29 +120,13 @@ static int vc4_v3d_debugfs_ident(struct seq_file *m, void *unused)
 	return 0;
 }
 
-/*
- * Wraps pm_runtime_get_sync() in a refcount, so that we can reliably
- * get the pm_runtime refcount to 0 in vc4_reset().
- */
 int
 vc4_v3d_pm_get(struct vc4_dev *vc4)
 {
 	if (WARN_ON_ONCE(vc4->gen > VC4_GEN_4))
 		return -ENODEV;
 
-	mutex_lock(&vc4->power_lock);
-	if (vc4->power_refcount++ == 0) {
-		int ret = pm_runtime_get_sync(&vc4->v3d->pdev->dev);
-
-		if (ret < 0) {
-			vc4->power_refcount--;
-			mutex_unlock(&vc4->power_lock);
-			return ret;
-		}
-	}
-	mutex_unlock(&vc4->power_lock);
-
-	return 0;
+	return pm_runtime_resume_and_get(&vc4->v3d->pdev->dev);
 }
 
 void
@@ -151,12 +135,8 @@ vc4_v3d_pm_put(struct vc4_dev *vc4)
 	if (WARN_ON_ONCE(vc4->gen > VC4_GEN_4))
 		return;
 
-	mutex_lock(&vc4->power_lock);
-	if (--vc4->power_refcount == 0) {
-		pm_runtime_mark_last_busy(&vc4->v3d->pdev->dev);
-		pm_runtime_put_autosuspend(&vc4->v3d->pdev->dev);
-	}
-	mutex_unlock(&vc4->power_lock);
+	pm_runtime_mark_last_busy(&vc4->v3d->pdev->dev);
+	pm_runtime_put_autosuspend(&vc4->v3d->pdev->dev);
 }
 
 static void vc4_v3d_init_hw(struct drm_device *dev)
@@ -479,6 +459,8 @@ static int vc4_v3d_bind(struct device *dev, struct device *master, void *data)
 
 	pm_runtime_use_autosuspend(dev);
 	pm_runtime_set_autosuspend_delay(dev, 40); /* a little over 2 frames. */
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
 
 	return 0;
 

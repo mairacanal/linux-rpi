@@ -219,13 +219,8 @@ struct vc4_dev {
 
 	struct work_struct overflow_mem_work;
 
-	int power_refcount;
-
 	/* Set to true when the load tracker is active. */
 	bool load_tracker_enabled;
-
-	/* Mutex controlling the power refcount. */
-	struct mutex power_lock;
 
 	struct drm_modeset_lock ctm_state_lock;
 	struct drm_private_obj ctm_manager;
