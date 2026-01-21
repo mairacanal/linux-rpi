@@ -20,6 +20,7 @@
 #include <drm/drm_managed.h>
 #include <drm/drm_mm.h>
 #include <drm/drm_modeset_lock.h>
+#include <drm/gpu_scheduler.h>
 
 #include <kunit/test-bug.h>
 
@@ -30,6 +31,21 @@ struct drm_gem_object;
 
 extern const struct drm_driver vc4_drm_driver;
 extern const struct drm_driver vc5_drm_driver;
+
+enum vc4_queue {
+	VC4_BIN,
+	VC4_RENDER,
+	VC4_MAX_QUEUES,
+};
+
+struct vc4_queue_state {
+	struct drm_gpu_scheduler sched;
+
+	u64 fence_context;
+	u64 emit_seqno;
+
+	spinlock_t fence_lock;
+};
 
 /* Don't forget to update vc4_bo.c: bo_type_names[] when adding to
  * this.
@@ -156,6 +172,8 @@ struct vc4_dev {
 	 */
 	uint64_t emit_seqno;
 
+	struct vc4_queue_state queue[VC4_MAX_QUEUES];
+
 	struct vc4_bin_job *bin_job;
 
 	struct vc4_render_job *render_job;
@@ -182,6 +200,18 @@ struct vc4_dev {
 	 * job_done_work.
 	 */
 	struct list_head job_done_list;
+
+	/* Lock taken when resetting the GPU, to keep multiple
+	 * processes from trying to park the scheduler threads and
+	 * reset at once.
+	 */
+	struct mutex reset_lock;
+
+	/* Lock taken when creating and pushing the GPU scheduler
+	 * jobs, to keep the sched-fence seqnos in order.
+	 */
+	struct mutex sched_lock;
+
 	/* Spinlock used to synchronize the job_list and seqno
 	 * accesses between the IRQ handler and GEM ioctls.
 	 */
@@ -290,8 +320,8 @@ struct vc4_bo {
 struct vc4_fence {
 	struct dma_fence base;
 	struct drm_device *dev;
-	/* vc4 seqno for signaled() test */
 	uint64_t seqno;
+	enum vc4_queue queue;
 };
 
 #define to_vc4_fence(_fence)					\
@@ -920,6 +950,8 @@ struct vc4_file {
 		struct mutex lock;
 	} perfmon;
 
+	struct drm_sched_entity sched_entity[VC4_MAX_QUEUES];
+
 	bool bin_bo_used;
 };
 
@@ -1112,6 +1144,7 @@ extern struct platform_driver vc4_dsi_driver;
 
 /* vc4_fence.c */
 extern const struct dma_fence_ops vc4_fence_ops;
+struct dma_fence *vc4_fence_create(struct vc4_dev *vc4, enum vc4_queue queue);
 
 /* vc4_firmware_kms.c */
 extern struct platform_driver vc4_firmware_kms_driver;
@@ -1130,6 +1163,7 @@ int vc4_wait_for_seqno(struct drm_device *dev, uint64_t seqno,
 void vc4_job_handle_completed(struct vc4_dev *vc4);
 int vc4_gem_madvise_ioctl(struct drm_device *dev, void *data,
 			  struct drm_file *file_priv);
+void vc4_save_hang_state(struct drm_device *dev);
 
 /* vc4_hdmi.c */
 extern struct platform_driver vc4_hdmi_driver;
@@ -1235,5 +1269,9 @@ int vc4_perfmon_destroy_ioctl(struct drm_device *dev, void *data,
 			      struct drm_file *file_priv);
 int vc4_perfmon_get_values_ioctl(struct drm_device *dev, void *data,
 				 struct drm_file *file_priv);
+
+/* vc4_sched.c */
+int vc4_sched_init(struct vc4_dev *vc4);
+void vc4_sched_fini(struct vc4_dev *vc4);
 
 #endif /* _VC4_DRV_H_ */
