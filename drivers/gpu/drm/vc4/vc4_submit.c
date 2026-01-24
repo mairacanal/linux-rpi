@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0+
-/* Copyright (C) 2026 Raspberry Pi */
+/*
+ * Copyright © 2014 Broadcom
+ * Copyright © 2026 Raspberry Pi
+ */
 
 #include <drm/drm_exec.h>
 #include <drm/drm_print.h>
@@ -132,8 +135,7 @@ vc4_get_bcl(struct drm_device *dev, struct vc4_exec_info *exec)
 	 */
 	temp = kvmalloc_array(temp_size, 1, GFP_KERNEL);
 	if (!temp) {
-		drm_err(dev, "Failed to allocate storage for copying "
-			"in bin/render CLs.\n");
+		drm_err(dev, "Failed to allocate storage for copying in bin/render CLs.");
 		ret = -ENOMEM;
 		goto fail;
 	}
@@ -304,10 +306,8 @@ vc4_render_job_free(struct kref *ref)
 	vc4->bin_alloc_used &= ~job->bin_slots;
 	spin_unlock_irqrestore(&vc4->job_lock, irqflags);
 
-	if (job->file) {
+	if (job->seqno)
 		xa_erase(&job->file->seqno_xa, job->seqno);
-		dma_fence_put(job->base.done_fence);
-	}
 
 	vc4_job_free(ref);
 	vc4_v3d_pm_put(vc4);
@@ -561,12 +561,10 @@ vc4_submit_cl_ioctl(struct drm_device *dev, void *data,
 	vc4_push_job(&render->base);
 
 	ret = xa_alloc_cyclic(&vc4_priv->seqno_xa, &render->seqno,
-			      dma_fence_get(render->base.done_fence),
+			      render->base.done_fence,
 			      xa_limit_32b, &vc4_priv->next_seqno, GFP_KERNEL);
-	if (ret < 0) {
-		dma_fence_put(render->base.done_fence);
+	if (ret < 0)
 		goto fail_unreserve;
-	}
 	mutex_unlock(&vc4->sched_lock);
 
 	vc4_attach_fences_and_unlock_reservation(file_priv, render,
