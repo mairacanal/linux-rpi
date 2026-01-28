@@ -259,6 +259,7 @@ vc4_job_free(struct kref *ref)
 	if (job->perfmon)
 		vc4_perfmon_put(job->perfmon);
 
+	vc4_v3d_pm_put(job->vc4);
 	kfree(job);
 }
 
@@ -310,7 +311,6 @@ vc4_render_job_free(struct kref *ref)
 		xa_erase(&job->file->seqno_xa, job->seqno);
 
 	vc4_job_free(ref);
-	vc4_v3d_pm_put(vc4);
 }
 
 static void
@@ -358,6 +358,10 @@ vc4_job_init(struct vc4_dev *vc4, struct drm_file *file_priv,
 	ret = drm_sched_job_add_syncobj_dependency(&job->base, file_priv,
 						   in_sync, 0);
 	if (ret && ret != -ENOENT)
+		goto fail_deps;
+
+	ret = vc4_v3d_pm_get(vc4);
+	if (ret)
 		goto fail_deps;
 
 	kref_init(&job->refcount);
@@ -489,19 +493,12 @@ vc4_submit_cl_ioctl(struct drm_device *dev, void *data,
 	if (ret)
 		return ret;
 
-	ret = vc4_v3d_pm_get(vc4);
-	if (ret) {
-		kfree(exec);
-		return ret;
-	}
-
 	exec->args = args;
 
 	ret = vc4_job_init(vc4, file_priv, (void *)&exec->render,
 			   sizeof(*exec->render), vc4_render_job_free,
 			   args->in_sync, VC4_RENDER);
 	if (ret) {
-		vc4_v3d_pm_put(vc4);
 		kfree(exec);
 		return ret;
 	}

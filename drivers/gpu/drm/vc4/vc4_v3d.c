@@ -139,7 +139,7 @@ vc4_v3d_pm_put(struct vc4_dev *vc4)
 	pm_runtime_put_autosuspend(&vc4->v3d->pdev->dev);
 }
 
-static void vc4_v3d_init_hw(struct drm_device *dev)
+void vc4_v3d_init_hw(struct drm_device *dev)
 {
 	struct vc4_dev *vc4 = to_vc4_dev(dev);
 

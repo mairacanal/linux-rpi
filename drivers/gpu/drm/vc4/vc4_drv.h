@@ -735,10 +735,10 @@ struct vc4_bin_job {
 
 	uint32_t ct0ca, ct0ea;
 
-	/* Last current addresses the hardware was processing when the
-	 * hangcheck timer checked on us.
+	/* Last current and return addresses the hardware was processing when
+	 * the job timedout.
 	 */
-	uint32_t last_ct0ca;
+	u32 timedout_ctca, timedout_ctra;
 
 	/* Corresponding render job, for attaching our overflow memory. */
 	struct vc4_render_job *render;
@@ -754,10 +754,10 @@ struct vc4_render_job {
 
 	uint32_t ct1ca, ct1ea;
 
-	/* Last current addresses the hardware was processing when the
-	 * hangcheck timer checked on us.
+	/* Last current and return addresses the hardware was processing when
+	 * the job timedout.
 	 */
-	uint32_t last_ct1ca;
+	u32 timedout_ctca, timedout_ctra;
 
 	/* This is the array of BOs that were looked up at the start of submission.
 	 * Command validation will use indices into this array.
@@ -1116,6 +1116,7 @@ void vc4_plane_async_set_fb(struct drm_plane *plane,
 /* vc4_v3d.c */
 extern struct platform_driver vc4_v3d_driver;
 extern const struct of_device_id vc4_v3d_dt_match[];
+void vc4_v3d_init_hw(struct drm_device *dev);
 int vc4_v3d_get_bin_slot(struct vc4_dev *vc4);
 int vc4_v3d_bin_bo_get(struct vc4_dev *vc4, bool *used);
 void vc4_v3d_bin_bo_put(struct vc4_dev *vc4);

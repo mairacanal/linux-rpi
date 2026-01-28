@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 /* Copyright (C) 2026 Raspberry Pi */
 
+#include <linux/clk.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 
@@ -169,16 +170,21 @@ static void
 vc4_reset(struct drm_device *dev)
 {
 	struct vc4_dev *vc4 = to_vc4_dev(dev);
+	struct vc4_v3d *v3d = vc4->v3d;
 
 	drm_err(dev, "Resetting GPU.\n");
 
-	/*
-	 * Power the device off and back on by dropping the reference
-	 * on runtime PM.
-	 */
-	pm_runtime_put_sync_suspend(&vc4->v3d->pdev->dev);
-	pm_runtime_get_sync(&vc4->v3d->pdev->dev);
+	vc4_irq_disable(dev);
 
+	/*
+	 * Power the device off and back on by enabling/disabling
+	 * the clock.
+	 */
+	clk_set_min_rate(v3d->clk, 0);
+	clk_disable_unprepare(v3d->clk);
+	clk_prepare_enable(v3d->clk);
+
+	vc4_v3d_init_hw(dev);
 	vc4_irq_reset(dev);
 }
 
@@ -213,21 +219,24 @@ vc4_gpu_reset_for_timeout(struct vc4_dev *vc4, struct drm_sched_job *sched_job)
 	return DRM_GPU_SCHED_STAT_RESET;
 }
 
-/* If the current address have changed, then the GPU has probably made
- * progress and we should delay the reset. This could fail if the GPU
- * got in an infinite loop in the CL, but that is pretty unlikely outside
- * of an i-g-t testcase.
- */
 static enum drm_gpu_sched_stat
 vc4_cl_job_timedout(struct drm_sched_job *sched_job, enum vc4_queue q,
-		    u32 *timedout_ctca)
+		    u32 *timedout_ctca, u32 *timedout_ctra)
 {
 	struct vc4_job *job = to_vc4_job(sched_job);
 	struct vc4_dev *vc4 = job->vc4;
 	u32 ctca = V3D_READ(V3D_CTNCA(q));
+	u32 ctra = V3D_READ(V3D_CTNRA0(q));
 
-	if (*timedout_ctca != ctca) {
+	/* If the current address or return address have changed, then the GPU
+	 * has probably made progress and we should delay the reset. This could
+	 * fail if the GPU got in an infinite loop in the CL, but that is pretty
+	 * unlikely outside of an i-g-t testcase.
+	 */
+	if (*timedout_ctca != ctca || *timedout_ctra != ctra) {
 		*timedout_ctca = ctca;
+		*timedout_ctra = ctra;
+
 		return DRM_GPU_SCHED_STAT_NO_HANG;
 	}
 
@@ -239,7 +248,8 @@ vc4_bin_job_timedout(struct drm_sched_job *sched_job)
 {
 	struct vc4_bin_job *job = to_bin_job(sched_job);
 
-	return vc4_cl_job_timedout(sched_job, VC4_BIN, &job->last_ct0ca);
+	return vc4_cl_job_timedout(sched_job, VC4_BIN,
+				   &job->timedout_ctca, &job->timedout_ctra);
 }
 
 static enum drm_gpu_sched_stat
@@ -247,7 +257,8 @@ vc4_render_job_timedout(struct drm_sched_job *sched_job)
 {
 	struct vc4_render_job *job = to_render_job(sched_job);
 
-	return vc4_cl_job_timedout(sched_job, VC4_RENDER, &job->last_ct1ca);
+	return vc4_cl_job_timedout(sched_job, VC4_RENDER,
+				   &job->timedout_ctca, &job->timedout_ctra);
 }
 
 static const struct drm_sched_backend_ops vc4_bin_sched_ops = {
