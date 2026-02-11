@@ -39,11 +39,9 @@ int v3d_mmu_flush_all(struct v3d_dev *v3d)
 {
 	int ret = 0;
 
-	pm_runtime_get_noresume(v3d->drm.dev);
-
 	/* Flush the PTs only if we're already awake */
-	if (!pm_runtime_active(v3d->drm.dev))
-		goto pm_put;
+	if (!pm_runtime_get_if_active(v3d->drm.dev))
+		return 0;
 
 	V3D_WRITE(V3D_MMUC_CONTROL, V3D_MMUC_CONTROL_FLUSH |
 		  V3D_MMUC_CONTROL_ENABLE);

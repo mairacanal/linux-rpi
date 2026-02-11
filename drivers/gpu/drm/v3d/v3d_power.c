@@ -2,7 +2,6 @@
 /* Copyright (C) 2026 Raspberry Pi */
 
 #include <linux/clk.h>
-#include <linux/reset.h>
 
 #include <drm/drm_print.h>
 
@@ -47,9 +46,6 @@ int v3d_power_suspend(struct device *dev)
 	v3d_irq_disable(v3d);
 	v3d_suspend_sms(v3d);
 
-	if (v3d->reset)
-		reset_control_assert(v3d->reset);
-
 	/* Some firmware versions might not actually power off the clock
 	 * when we set the clock state to off. Therefore, set the clock
 	 * rate to 0 to ensure it is running in the minimum rate.
@@ -78,19 +74,9 @@ int v3d_power_resume(struct device *dev)
 	if (v3d->clk)
 		clk_set_rate(v3d->clk, v3d->max_clk_rate);
 
-	if (v3d->reset) {
-		ret = reset_control_deassert(v3d->reset);
-		if (ret)
-			goto clk_disable;
-	}
-
 	v3d_resume_sms(v3d);
 	v3d_mmu_set_page_table(v3d);
 	v3d_irq_enable(v3d);
 
 	return 0;
-
-clk_disable:
-	clk_disable_unprepare(v3d->clk);
-	return ret;
 }

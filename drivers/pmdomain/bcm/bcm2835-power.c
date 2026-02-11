@@ -166,8 +166,6 @@ static int bcm2835_asb_control(struct bcm2835_power *power, u32 reg, bool enable
 		break;
 	}
 
-	start = ktime_get_ns();
-
 	/* Enable the module's async AXI bridges. */
 	if (enable) {
 		val = readl(base + reg) & ~ASB_REQ_STOP;
@@ -176,9 +174,10 @@ static int bcm2835_asb_control(struct bcm2835_power *power, u32 reg, bool enable
 	}
 	writel(PM_PASSWORD | val, base + reg);
 
+	start = ktime_get_ns();
 	while (!!(readl(base + reg) & ASB_ACK) == enable) {
 		cpu_relax();
-		if (ktime_get_ns() - start >= 1000)
+		if (ktime_get_ns() - start >= 5000)
 			return -ETIMEDOUT;
 	}
 
@@ -353,12 +352,14 @@ static int bcm2835_asb_power_off(struct bcm2835_power_domain *pd,
 	if (ret) {
 		dev_warn(power->dev, "Failed to disable ASB slave for %s\n",
 			 pd->base.name);
+		BUG_ON(1);
 		return ret;
 	}
 	ret = bcm2835_asb_disable(power, asb_m_reg);
 	if (ret) {
 		dev_warn(power->dev, "Failed to disable ASB master for %s\n",
 			 pd->base.name);
+		BUG_ON(1);
 		bcm2835_asb_enable(power, asb_s_reg);
 		return ret;
 	}
@@ -580,11 +581,11 @@ static int bcm2835_reset_status(struct reset_controller_dev *rcdev,
 
 	switch (id) {
 	case BCM2835_RESET_V3D:
-		return !PM_READ(PM_GRAFX & PM_V3DRSTN);
+		return !(PM_READ(PM_GRAFX) & PM_V3DRSTN);
 	case BCM2835_RESET_H264:
-		return !PM_READ(PM_IMAGE & PM_H264RSTN);
+		return !(PM_READ(PM_IMAGE) & PM_H264RSTN);
 	case BCM2835_RESET_ISP:
-		return !PM_READ(PM_IMAGE & PM_ISPRSTN);
+		return !(PM_READ(PM_IMAGE) & PM_ISPRSTN);
 	default:
 		return -EINVAL;
 	}
@@ -648,14 +649,14 @@ static int bcm2835_power_probe(struct platform_device *pdev)
 			dev_err(dev, "ASB register ID returned 0x%08x\n", id);
 			return -ENODEV;
 		}
+	}
 
-		if (power->rpivid_asb) {
-			id = readl(power->rpivid_asb + ASB_AXI_BRDG_ID);
-			if (id != BCM2835_BRDG_ID /* "BRDG" */) {
-				dev_err(dev, "RPiVid ASB register ID returned 0x%08x\n",
-					id);
-				return -ENODEV;
-			}
+	if (power->rpivid_asb) {
+		id = readl(power->rpivid_asb + ASB_AXI_BRDG_ID);
+		if (id != BCM2835_BRDG_ID /* "BRDG" */) {
+			dev_err(dev, "RPiVid ASB register ID returned 0x%08x\n",
+				id);
+			return -ENODEV;
 		}
 	}
 

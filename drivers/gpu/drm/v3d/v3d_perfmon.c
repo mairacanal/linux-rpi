@@ -238,6 +238,11 @@ void v3d_perfmon_start(struct v3d_dev *v3d, struct v3d_perfmon *perfmon)
 	ncounters = perfmon->ncounters;
 	mask = GENMASK(ncounters - 1, 0);
 
+	if (v3d_pm_runtime_get(v3d)) {
+		v3d->active_perfmon = NULL;
+		return;
+	}
+
 	for (i = 0; i < ncounters; i++) {
 		u32 source = i / 4;
 		u32 channel = V3D_SET_FIELD_VER(perfmon->counters[i], V3D_PCTR_S0,
@@ -259,6 +264,8 @@ void v3d_perfmon_start(struct v3d_dev *v3d, struct v3d_perfmon *perfmon)
 	V3D_CORE_WRITE(0, V3D_V4_PCTR_0_CLR, mask);
 	V3D_CORE_WRITE(0, V3D_PCTR_0_OVERFLOW, mask);
 
+	v3d_pm_runtime_put(v3d);
+
 	v3d->active_perfmon = perfmon;
 }
 
@@ -271,10 +278,11 @@ void v3d_perfmon_stop(struct v3d_dev *v3d, struct v3d_perfmon *perfmon,
 		return;
 
 	mutex_lock(&perfmon->lock);
-	if (perfmon != v3d->active_perfmon) {
-		mutex_unlock(&perfmon->lock);
-		return;
-	}
+	if (perfmon != v3d->active_perfmon)
+		goto out;
+
+	if (v3d_pm_runtime_get(v3d))
+		goto out_clear;
 
 	if (capture)
 		for (i = 0; i < perfmon->ncounters; i++)
@@ -282,7 +290,12 @@ void v3d_perfmon_stop(struct v3d_dev *v3d, struct v3d_perfmon *perfmon,
 
 	V3D_CORE_WRITE(0, V3D_V4_PCTR_0_EN, 0);
 
+	v3d_pm_runtime_put(v3d);
+
+out_clear:
 	v3d->active_perfmon = NULL;
+
+out:
 	mutex_unlock(&perfmon->lock);
 }
 
