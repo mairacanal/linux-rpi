@@ -322,12 +322,6 @@ int hevc_d_hw_start_clock(struct hevc_d_dev *dev)
 {
 	int rv;
 
-	rv = clk_set_min_rate(dev->clock, dev->max_clock_rate);
-	if (rv) {
-		dev_err(dev->dev, "Failed to set clock rate\n");
-		return rv;
-	}
-
 	rv = clk_prepare_enable(dev->clock);
 	if (rv) {
 		dev_err(dev->dev, "Failed to enable clock\n");
@@ -338,29 +332,14 @@ int hevc_d_hw_start_clock(struct hevc_d_dev *dev)
 
 static int hw_setup(struct hevc_d_dev *dev)
 {
-	struct device_node *node;
 	u32 ver;
 	u32 irq_stat;
-	struct rpi_firmware *firmware;
 
 	ver = apb_read(dev, RPI_VERSION);
 	if (ver != 0x202) {
 		dev_err(dev->dev, "Unexpected version %#x only 0x202 supported\n", ver);
 		return -ENODEV;
 	}
-
-	node = rpi_firmware_find_node();
-	if (!node)
-		return -EINVAL;
-
-	firmware = rpi_firmware_get(node);
-	of_node_put(node);
-	if (!firmware)
-		return -EPROBE_DEFER;
-
-	dev->max_clock_rate = rpi_firmware_clk_get_max_rate(firmware,
-							    RPI_FIRMWARE_HEVC_CLK_ID);
-	rpi_firmware_put(firmware);
 
 	/*
 	 * Enable IRQs & reset anything pending
