@@ -314,12 +314,18 @@ void hevc_d_hw_irq_active2_irq(struct hevc_d_dev *dev,
  */
 void hevc_d_hw_stop_clock(struct hevc_d_dev *dev)
 {
+	u32 ictrl = irq_read(dev, ARG_IC_ICTRL);
+
+	/* Clear any pending interrupts */
+	irq_write(dev, ARG_IC_ICTRL, ictrl & ~ARG_IC_ICTRL_SET_ZERO_MASK);
+
 	clk_disable_unprepare(dev->clock);
 }
 
 /* Always starts the clock if it isn't already on this ctx */
 int hevc_d_hw_start_clock(struct hevc_d_dev *dev)
 {
+	u32 ictrl;
 	int rv;
 
 	rv = clk_prepare_enable(dev->clock);
@@ -327,30 +333,12 @@ int hevc_d_hw_start_clock(struct hevc_d_dev *dev)
 		dev_err(dev->dev, "Failed to enable clock\n");
 		return rv;
 	}
-	return 0;
-}
 
-static int hw_setup(struct hevc_d_dev *dev)
-{
-	u32 ver;
-	u32 irq_stat;
-
-	ver = apb_read(dev, RPI_VERSION);
-	if (ver != 0x202) {
-		dev_err(dev->dev, "Unexpected version %#x only 0x202 supported\n", ver);
-		return -ENODEV;
-	}
-
-	/*
-	 * Enable IRQs & reset anything pending
-	 * Whilst this seems the wrong way round the h/w doesn't actually
-	 * set the IRQ status bits till the IRQs are enabled. As we haven't
-	 * got the IRQ yet this should still be safe.
-	 */
+	/* Enable IRQs & reset any pending interrupts */
 	irq_write(dev, ARG_IC_ICTRL,
 		  ARG_IC_ICTRL_ACTIVE1_EN_SET | ARG_IC_ICTRL_ACTIVE2_EN_SET);
-	irq_stat = irq_read(dev, ARG_IC_ICTRL);
-	irq_write(dev, ARG_IC_ICTRL, irq_stat);
+	ictrl = irq_read(dev, ARG_IC_ICTRL);
+	irq_write(dev, ARG_IC_ICTRL, ictrl);
 
 	return 0;
 }
@@ -358,7 +346,7 @@ static int hw_setup(struct hevc_d_dev *dev)
 int hevc_d_hw_probe(struct hevc_d_dev *dev)
 {
 	int irq_dec;
-	int ret;
+	int ret, ver;
 
 	ictl_init(&dev->ic_active1, HEVC_D_P2BUF_COUNT);
 	ictl_init(&dev->ic_active2, HEVC_D_ICTL_ENABLE_UNLIMITED);
@@ -378,10 +366,14 @@ int hevc_d_hw_probe(struct hevc_d_dev *dev)
 	ret = clk_prepare_enable(dev->clock);
 	if (ret)
 		return ret;
-	ret = hw_setup(dev);
+
+	ver = apb_read(dev, RPI_VERSION);
 	clk_disable_unprepare(dev->clock);
-	if (ret)
-		return ret;
+
+	if (ver != 0x202) {
+		dev_err(dev->dev, "Unexpected version %#x only 0x202 supported\n", ver);
+		return -ENODEV;
+	}
 
 	irq_dec = platform_get_irq(dev->pdev, 0);
 	if (irq_dec <= 0)
@@ -389,7 +381,7 @@ int hevc_d_hw_probe(struct hevc_d_dev *dev)
 	ret = devm_request_threaded_irq(dev->dev, irq_dec,
 					hevc_d_irq_irq,
 					hevc_d_irq_thread,
-					0, dev_name(dev->dev), dev);
+					IRQF_ONESHOT, dev_name(dev->dev), dev);
 	if (ret)
 		dev_err(dev->dev, "Failed to request IRQ - %d\n", ret);
 
