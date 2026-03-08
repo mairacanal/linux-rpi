@@ -619,16 +619,17 @@ static void hevc_d_stop_streaming(struct vb2_queue *vq)
 	struct hevc_d_ctx *ctx = vb2_get_drv_priv(vq);
 	struct hevc_d_dev *dev = ctx->dev;
 
-	if (V4L2_TYPE_IS_OUTPUT(vq->type)) {
+	if (V4L2_TYPE_IS_OUTPUT(vq->type))
 		hevc_d_h265_stop(ctx);
-		hevc_d_hw_stop_clock(dev);
-	}
 
 	hevc_d_queue_cleanup(vq, VB2_BUF_STATE_ERROR);
 
 	vb2_wait_for_all_buffers(vq);
 
 	v4l2_m2m_update_stop_streaming_state(ctx->fh.m2m_ctx, vq);
+
+	if (V4L2_TYPE_IS_OUTPUT(vq->type))
+		hevc_d_hw_stop_clock(dev);
 }
 
 static void hevc_d_buf_queue(struct vb2_buffer *vb)
