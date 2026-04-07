@@ -46,7 +46,6 @@ v3d_overflow_mem_work(struct work_struct *work)
 	struct v3d_queue_state *queue = &v3d->queue[V3D_BIN];
 	struct v3d_bin_job *bin_job;
 	struct drm_gem_object *obj;
-	unsigned long irqflags;
 
 	if (IS_ERR(bo)) {
 		DRM_ERROR("Couldn't allocate binner overflow mem\n");
@@ -63,17 +62,15 @@ v3d_overflow_mem_work(struct work_struct *work)
 	 * bin job got scheduled, that's fine.  We'll just give them
 	 * some binner pool anyway.
 	 */
-	spin_lock_irqsave(&queue->queue_lock, irqflags);
-	bin_job = (struct v3d_bin_job *)queue->active_job;
+	scoped_guard(spinlock, &queue->queue_lock) {
+		bin_job = (struct v3d_bin_job *)queue->active_job;
 
-	if (!bin_job) {
-		spin_unlock_irqrestore(&queue->queue_lock, irqflags);
-		goto out;
+		if (!bin_job)
+			goto out;
+
+		drm_gem_object_get(obj);
+		list_add_tail(&bo->unref_head, &bin_job->render->unref_list);
 	}
-
-	drm_gem_object_get(obj);
-	list_add_tail(&bo->unref_head, &bin_job->render->unref_list);
-	spin_unlock_irqrestore(&queue->queue_lock, irqflags);
 
 	v3d_mmu_flush_all(v3d);
 
