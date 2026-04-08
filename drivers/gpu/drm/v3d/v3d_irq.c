@@ -13,6 +13,7 @@
  * current job can make progress.
  */
 
+#include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/sched/clock.h>
 
