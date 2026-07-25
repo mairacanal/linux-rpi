@@ -407,6 +407,13 @@ validate_tile_binning_config(VALIDATE_ARGS)
 	/* Since the tile alloc array will follow us, align. */
 	exec->tile_alloc_offset = bin_addr + roundup(tile_state_size, 4096);
 
+	if (vc4->bin_bo->base.vaddr) {
+		u32 tsda_off = bin_addr - (u32)vc4->bin_bo->base.dma_addr;
+
+		memset((u8 *)vc4->bin_bo->base.vaddr + tsda_off, 0,
+		       exec->tile_alloc_offset - bin_addr);
+	}
+
 	*(uint8_t *)(validated + 14) =
 		((flags & ~(VC4_BIN_CONFIG_ALLOC_INIT_BLOCK_SIZE_MASK |
 			    VC4_BIN_CONFIG_ALLOC_BLOCK_SIZE_MASK)) |
